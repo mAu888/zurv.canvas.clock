@@ -1,0 +1,9 @@
+# Eclipse
+.project
+.settings
+
+# OS X
+.DS_Store
+
+# Windows
+Thumbs.db
