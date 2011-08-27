@@ -3,6 +3,48 @@ var zurv = zurv || {};
 zurv.canvas = {};
 
 /**
+ * Canvas.
+ * @param context
+ */
+zurv.canvas.Canvas = function(context, width, height) {
+	this._context = context;
+	this._width = width;
+	this._height = height;
+	
+	this._drawables = [];
+};
+
+zurv.canvas.Canvas.prototype = new Object();
+
+zurv.canvas.Canvas.prototype.add = function() {
+	if(arguments.length > 0) {
+		for(var i = 0; i < arguments.length; i++) {
+			if(arguments[i] instanceof zurv.canvas.Drawable) this._drawables.push(arguments[i]);
+		}
+	}
+	else {
+		throw 'invalid argument';
+	}
+};
+
+zurv.canvas.Canvas.prototype.draw = function() {
+	// Reverse for layering (first item is lowest in paint stack)
+	var objects = this._drawables.reverse();
+	
+	// Reset canvas
+	this.reset();
+	
+	for(var i = 0; i < objects.length; i++) {
+		objects[i].draw(this._context);
+	}
+};
+
+zurv.canvas.Canvas.prototype.reset = function() {
+	this._context.fillStyle = '#f5f5f5';
+	this._context.fillRect(0, 0, this._width, this._height);
+};
+
+/**
  * Point.
  * @param x
  * @param y
@@ -96,9 +138,16 @@ zurv.canvas.Circle.prototype.draw = function(g) {
  * @param styles
  */
 zurv.canvas.Line = function() {
+	this._steps = 360;
+
 	if(arguments.length == 2) {
-		this.from = arguments[0];
-		this.to = arguments[1];
+		this._from = arguments[0];
+		this._to = arguments[1];
+		
+		var deltaX = this._to.x - this._from.x,
+			deltaY = this._to.y - this._from.y;
+		
+		this._length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 	}
 	else if(arguments.length == 4 || arguments.length == 5) {
 		var steps = arguments[1] / 2, // Divide the circle in how many parts
@@ -106,18 +155,21 @@ zurv.canvas.Line = function() {
 			length = arguments[3], // Line length
 			clocklike = arguments[4] || false; // Clocklike
 			
-		this.from = arguments[0]; // Center of circle
+		this._from = arguments[0]; // Center of circle
+		
+		this._length = length;
+		this._steps = steps;
 		
 		if(clocklike) {
-			this.to = new zurv.canvas.Point(
-				this.from.x + length * Math.cos(current * Math.PI / steps - Math.PI / 2),
-				this.from.y + length * Math.sin(current * Math.PI / steps - Math.PI / 2)
+			this._to = new zurv.canvas.Point(
+				this._from.x + length * Math.cos(current * Math.PI / steps - Math.PI / 2),
+				this._from.y + length * Math.sin(current * Math.PI / steps - Math.PI / 2)
 			);
 		}
 		else {
-			this.to = new zurv.canvas.Point(
-				this.from.x + length * Math.cos(current * Math.PI / steps),
-				this.from.y - length * Math.sin(current * Math.PI / steps)
+			this._to = new zurv.canvas.Point(
+				this._from.x + length * Math.cos(current * Math.PI / steps),
+				this._from.y - length * Math.sin(current * Math.PI / steps)
 			);
 		}
 	}
@@ -128,13 +180,55 @@ zurv.canvas.Line = function() {
 
 zurv.canvas.Line.prototype = new zurv.canvas.Drawable();
 
+zurv.canvas.Line.prototype.from = function() {
+	if(arguments.length < 1) {
+		return this._from;
+	}
+	else if(arguments.length == 1 && arguments[0] instanceof zurv.canvas.Point) {
+		this._from = arguments[0];
+	}
+	else {
+		this._from = new zurv.canvas.Point(arguments[0], arguments[1]);
+	} 
+};
+
+zurv.canvas.Line.prototype.to = function() {
+	if(arguments.length < 1) {
+		return this._to;
+	}
+	else if(arguments[0] instanceof zurv.canvas.Point) {
+		this._to = arguments[0];
+	}
+	else if(arguments.length == 1 || (arguments.length == 2 && typeof arguments[1] === 'boolean')) {
+		var current = arguments[0];
+		if(typeof arguments[1] === 'boolean' && arguments[1]) {
+			this._to = new zurv.canvas.Point(
+				this._from.x + this._length * Math.cos(current * Math.PI / this._steps - Math.PI / 2),
+				this._from.y + this._length * Math.sin(current * Math.PI / this._steps - Math.PI / 2)
+			);
+		}
+		else {
+			this._to = new zurv.canvas.Point(
+				this._from.x + this._length * Math.cos(current * Math.PI / this._steps),
+				this._from.y - this._length * Math.sin(current * Math.PI / this._steps)
+			);
+		}
+	}
+	else if(arguments.length == 2) {
+		this._to = new zurv.canvas.Point(arguments[0], arguments[1]);
+	}
+	else {
+		throw 'invalid arguments';
+	}
+};
+
 zurv.canvas.Line.prototype.draw = function(g) {
 	this.beforeDraw(g);
 	
 	g.beginPath();
 	
-	g.moveTo(this.from.x, this.from.y);
-	g.lineTo(this.to.x, this.to.y);
+	g.moveTo(this._from.x, this._from.y);
+	g.lineTo(this._to.x, this._to.y);
 	
 	// Apply styles
 	g.fill();

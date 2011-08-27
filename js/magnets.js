@@ -12,42 +12,35 @@
 			g.fillStyle = '#000';
 		};
 
-		// Initial reset
-		resetViewport(g);
+		var cvs = new zurv.canvas.Canvas(g, canvas.width, canvas.height);
 		
-		var clock = function() {
-			resetViewport(g);
-			
+		var	center = new zurv.canvas.Point(canvas.width/2, canvas.height/2),
+			hourLine = new zurv.canvas.Line(center, 12, 0, 85, true),
+			minuteLine = new zurv.canvas.Line(center, 60, 0, 140, true),
+			secondLine = new zurv.canvas.Line(center, 60, 0,  150, true);
+		
+		hourLine.styles({ stroke: 'rgba(0,0,0,.5);', width: 7, cap: 'round' });
+		minuteLine.styles({ stroke: 'rgba(0,0,0,.5);', width: 3 });
+		secondLine.styles({ stroke: 'rgba(255,0,0,.4);', width: 2 });
+		
+		var circle = new zurv.canvas.Circle(center, 150);
+		circle.styles({ stroke: 'rgba(0,0,0,.2);', fill: 'none', width: 3 });
+		
+		cvs.add(circle, hourLine, minuteLine, secondLine);
+		
+		var clockThread = new zurv.Thread(function () {
 			var date = new Date(),
 				hour = date.getHours() % 12 + date.getMinutes() / 60,
 				minute = date.getMinutes(),
-				second = date.getSeconds(),
-				center = new zurv.canvas.Point(canvas.width/2, canvas.height/2);
-			
-			var hourLine = new zurv.canvas.Line(center, 12, hour, 85, true);
-			hourLine.styles({ stroke: 'rgba(0,0,0,.5);', width: 7, cap: 'round' });
-			hourLine.draw(g);
-			
-			var minuteLine = new zurv.canvas.Line(center, 60, minute, 140, true);
-			minuteLine.styles({ stroke: 'rgba(0,0,0,.5);', width: 3 });
-			minuteLine.draw(g);
-			
-			var secondLine = new zurv.canvas.Line(center, 60, second,  150, true);
-			secondLine.styles({ stroke: 'rgba(0,0,0,.3);', width: 2 });
-			secondLine.draw(g);
-			
-			
-			// Text
-			g.font = '20px Impact';
-			g.fillStyle = 'rgba(0,0,0,.1);';
-			var string = 'Uhrzeit',
-				metrics = g.measureText(string);
-			
-			g.fillText(string, canvas.width/2 - metrics.width / 2, 65);
-			
-			window.setTimeout(clock, 1000);
-		};
+				second = date.getSeconds();
 		
-		clock();
+			hourLine.to(hour, true);
+			minuteLine.to(minute, true);
+			secondLine.to(second, true);
+			
+			cvs.draw();
+		}, null, 1000);
+		
+		clockThread.run();
 	};
 })(window);
