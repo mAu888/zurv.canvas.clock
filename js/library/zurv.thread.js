@@ -24,7 +24,7 @@ zurv.Thread.prototype.run = function() {
 		if(this._expires * 1000 < this._tick) return;
 		if(! this._running) return;
 		
-		this._threadFunc();
+		this._threadFunc({ expires: this._expires });
 		
 		if(typeof this._expires !== 'undefined') this._expires -= this._tick;
 		
@@ -49,4 +49,11 @@ zurv.Thread.prototype.stop = function() {
  */
 zurv.Thread.prototype.notify = function() {
 	this.run();
+};
+
+/**
+ * Stopped?
+ */
+zurv.Thread.prototype.running = function() {
+	return this._running;
 };
